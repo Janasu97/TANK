@@ -18,8 +18,8 @@ else:
 def create_distance_control(str_name):
     distance = ctrl.Antecedent(np.arange(0, 7, 1), 'distance_'+str(str_name))
     distance['superlow'] = fuzz.trimf(distance.universe, [0, 0, 0.5])
-    distance['low'] = fuzz.trimf(distance.universe, [0.5, 1, 1.5])
-    distance['medium'] = fuzz.trimf(distance.universe, [1.5, 3, 4])
+    distance['low'] = fuzz.trimf(distance.universe, [0.5, 1, 2])
+    distance['medium'] = fuzz.trimf(distance.universe, [2, 3, 4])
     distance['high'] = fuzz.trimf(distance.universe, [4, 10, 20])
     return distance
 
@@ -45,22 +45,26 @@ dist_SW = create_distance_control('SW')
 vel_thresh = create_velocity_thresholds()
 
 
+# both
+both_rule1 = ctrl.Rule(dist_NE['low'] & dist_NW['medium'] | dist_EN['medium'] & dist_ES['medium'] | dist_WN['medium'] & dist_WS['medium'] | dist_SE['low'] & dist_SW['low'], vel_thresh['medium'])
+# both_rule2 = ctrl.Rule(dist_NE['low'] & dist_NW['medium'] | dist_EN['medium'] & dist_ES['medium'] | dist_WN['low'] & dist_WS['low'] | dist_SE['low'] & dist_SW['low'], vel_thresh['medium'])
 
-rule0 = ctrl.Rule(dist_NE['superlow'] | dist_EN['superlow'] | dist_NW['superlow'], vel_thresh['superlow'])
-rule1 = ctrl.Rule(dist_NE['low'] | dist_EN['low'], vel_thresh['low'])
-rule2 = ctrl.Rule(dist_NE['medium'] | dist_EN['medium'], vel_thresh['medium'])
-rule3 = ctrl.Rule(dist_NE['high'] | dist_EN['high'], vel_thresh['high'])
-left_velocity_ctrl = ctrl.ControlSystem([rule0, rule1, rule2, rule3])
+#both fill ruels
+both_rule3 = ctrl.Rule(dist_NE['superlow'] | dist_NW['superlow'] | dist_EN['superlow'] | dist_ES['superlow'] | dist_WN['superlow'] | dist_WS['superlow'] | dist_SE['superlow'] | dist_SW['superlow'], vel_thresh['superlow'])
+# both_rule4 = ctrl.Rule(dist_NE['high'] | dist_NW['low'] | dist_EN['low'] | dist_ES['low'] | dist_WN['high'] | dist_WS['low'] | dist_SE['high'] | dist_SW['medium'] | dist_NW['high'] | dist_EN['high'] | dist_ES['high'] | dist_WS['medium'] | dist_SE['medium'], vel_thresh['low'])
+
+# LEFT
+left_rule1 = ctrl.Rule(dist_NE['medium'] | dist_NW['medium'] | dist_EN['medium'] | dist_ES['medium'] | dist_WN['medium'] | dist_WS['low'] | dist_SE['low'] | dist_SW['low'], vel_thresh['high'])
+left_rule2 = ctrl.Rule(dist_NE['high'] | dist_NW['low'] | dist_EN['low'] | dist_ES['low'] | dist_WN['low'] | dist_WS['low'] | dist_SE['high'] | dist_SW['high'], vel_thresh['superlow'])
+left_rule3 = ctrl.Rule(dist_NE['low'] | dist_NW['low'] | dist_EN['medium'] | dist_ES['medium'] | dist_WN['medium'] | dist_WS['low'] | dist_SE['low'] | dist_SW['high'], vel_thresh['superlow'])
+
+# RIGHT
+right_rule1 = ctrl.Rule(dist_NE['medium'] | dist_NW['medium'] | dist_EN['medium'] | dist_ES['medium'] | dist_WN['medium'] | dist_WS['low'] | dist_SE['low'] | dist_SW['low'], vel_thresh['superlow'])
+right_rule2 = ctrl.Rule(dist_NE['high'] | dist_NW['low'] | dist_EN['low'] | dist_ES['low'] | dist_WN['low'] | dist_WS['low'] | dist_SE['high'] | dist_SW['high'], vel_thresh['high'])
 
 
-rule0 = ctrl.Rule(dist_NE['superlow'] | dist_EN['superlow'], vel_thresh['superlow'])
-rule1 = ctrl.Rule(dist_NE['low'] | dist_EN['low'], vel_thresh['low'])
-rule2 = ctrl.Rule(dist_NE['medium'] | dist_EN['medium'], vel_thresh['medium'])
-rule3 = ctrl.Rule(dist_NE['high'] | dist_EN['high'], vel_thresh['high'])
-rule4 = ctrl.Rule(dist_NE['low'] & dist_EN['medium'] & dist_ES['medium'], vel_thresh['neg_low'])
-rule5 = ctrl.Rule(dist_NE['medium'] & dist_EN['medium'] & dist_ES['medium'], vel_thresh['neg_medium'])
-
-right_velocity_ctrl = ctrl.ControlSystem([rule0, rule1, rule2, rule3, rule4, rule5])
+left_velocity_ctrl = ctrl.ControlSystem([both_rule1, both_rule3, left_rule1, left_rule2, left_rule3])
+right_velocity_ctrl = ctrl.ControlSystem([both_rule1, both_rule3, right_rule1, right_rule2])
 
 print("PRESS ANY BUTTON TO CONTINUE")
 x = input()
@@ -99,25 +103,43 @@ while (time.time()-t)<360: # read values for 60 seconds
     velociting_left.input['distance_NE'] = np.linalg.norm(NE_detectedPoint)
     velociting_left.input['distance_NW'] = np.linalg.norm(NW_detectedPoint)
     velociting_left.input['distance_EN'] = np.linalg.norm(EN_detectedPoint)
-    # velociting_left.input['distance_ES'] = np.linalg.norm(ES_detectedPoint)
-    # velociting_left.input['distance_WN'] = np.linalg.norm(NE_detectedPoint)
-    # velociting_left.input['distance_WS'] = np.linalg.norm(NW_detectedPoint)
-    # velociting_left.input['distance_SE'] = np.linalg.norm(EN_detectedPoint)
-    # velociting_left.input['distance_SW'] = np.linalg.norm(ES_detectedPoint)
+    velociting_left.input['distance_ES'] = np.linalg.norm(ES_detectedPoint)
+    velociting_left.input['distance_WN'] = np.linalg.norm(NE_detectedPoint)
+    velociting_left.input['distance_WS'] = np.linalg.norm(NW_detectedPoint)
+    velociting_left.input['distance_SE'] = np.linalg.norm(EN_detectedPoint)
+    velociting_left.input['distance_SW'] = np.linalg.norm(ES_detectedPoint)
     velociting_left.compute()
 
     velociting_right = ctrl.ControlSystemSimulation(right_velocity_ctrl)
     velociting_right.input['distance_NE'] = np.linalg.norm(NE_detectedPoint)
-    # velociting_right.input['distance_NW'] = np.linalg.norm(NW_detectedPoint)
+    velociting_right.input['distance_NW'] = np.linalg.norm(NW_detectedPoint)
     velociting_right.input['distance_EN'] = np.linalg.norm(EN_detectedPoint)
     velociting_right.input['distance_ES'] = np.linalg.norm(ES_detectedPoint)
+    velociting_right.input['distance_WN'] = np.linalg.norm(NE_detectedPoint)
+    velociting_right.input['distance_WS'] = np.linalg.norm(NW_detectedPoint)
+    velociting_right.input['distance_SE'] = np.linalg.norm(EN_detectedPoint)
+    velociting_right.input['distance_SW'] = np.linalg.norm(ES_detectedPoint)
     velociting_right.compute()
 
     tank.leftvelocity = velociting_left.output['velocity']
     tank.rightvelocity = velociting_right.output['velocity']
     tank.setVelocity()
 
-    print(velociting_left.output['velocity'], velociting_right.output['velocity'])
+    if int((time.time()-t)*10)%10==0:
+        print('NE -> ',np.linalg.norm(NE_detectedPoint))
+        print('NW_detectedPoint -> ',np.linalg.norm(NW_detectedPoint))
+        print('EN_detectedPoint -> ',np.linalg.norm(EN_detectedPoint))
+        print('ES_detectedPoint -> ',np.linalg.norm(ES_detectedPoint))
+        print('WN_detectedPoint -> ',np.linalg.norm(WN_detectedPoint))
+        print('WS_detectedPoint -> ',np.linalg.norm(WS_detectedPoint))
+        print('SE_detectedPoint -> ',np.linalg.norm(SE_detectedPoint))
+        print('SW_detectedPoint -> ',np.linalg.norm(SW_detectedPoint))
+
+        velociting_left.print_state()
+
+        print('left',velociting_left.output['velocity'])
+        print('right',velociting_right.output['velocity'])
+        print('==============================================')
     # print(np.linalg.norm(NE_detectedPoint), np.linalg.norm(EN_detectedPoint))
 
 
